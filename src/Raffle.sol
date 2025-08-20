@@ -16,7 +16,15 @@ contract Raffle is VRFConsumerBaseV2Plus {
     error Raffle__SendMoreToEnterRaffle();
     error Raffle__NotEnoughTimePassedToPickWinner();
     error Raffle__TransferToWinnerFailed();
+    error Raffle__NotOpen();
 
+    /*Type Declarations */
+    enum RaffleState {
+        OPEN, //0
+        CALCULATING_WINNER //1
+    }
+
+    /* State Variables */
     uint256 private immutable i_entranceFee;
 
     // Payable address array to store players
@@ -31,11 +39,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
     uint32 private immutable i_callbackGasLimit;
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
+    RaffleState private s_raffleState;
 
-    address private s_recentWinner; 
+    address private s_recentWinner;
 
     /* Events */
     event RaffleEntered(address indexed player);
+    event WinnerPicked(address indexed winner);
 
     constructor(
         uint256 entranceFee,
@@ -47,13 +57,19 @@ contract Raffle is VRFConsumerBaseV2Plus {
     ) VRFConsumerBaseV2Plus(vrfCoordinator) {
         i_entranceFee = entranceFee;
         i_interval = interval;
-        s_lastTimeStamp = block.timestamp;
         i_keyHash = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+
+        s_lastTimeStamp = block.timestamp;
+        s_raffleState = RaffleState.OPEN;
     }
 
     function enterRaffle() external payable {
+        if (s_raffleState != RaffleState.OPEN) {
+            revert Raffle__NotOpen();
+        }
+
         // Not very gas efficient to use require and string
         // require(msg.value >= i_entranceFee, "Did not enough ETH sent!");
         if (msg.value < i_entranceFee) {
@@ -76,12 +92,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
             revert Raffle__NotEnoughTimePassedToPickWinner();
         }
 
+        s_raffleState = RaffleState.CALCULATING_WINNER;
+
         //Get Random Number
         //We cant get one from blockhash because it is a deterministic function
         //We will use ChainLink VRF to get a random
         // 1. Request RNG
 
-        
         VRFV2PlusClient.RandomWordsRequest memory request = VRFV2PlusClient
             .RandomWordsRequest({
                 keyHash: i_keyHash,
@@ -100,18 +117,24 @@ contract Raffle is VRFConsumerBaseV2Plus {
         // 2. Get RNG
     }
 
-    //Internal because the external contract calls raw fulfillRandomWords which then calls this 
+    //Internal because the external contract calls raw fulfillRandomWords which then calls this
     function fulfillRandomWords(
         uint256 requestId,
         uint256[] calldata randomWords
     ) internal override {
         uint256 winnerIndex = randomWords[0] % s_players.length;
         s_recentWinner = s_players[winnerIndex];
+
+        s_raffleState = RaffleState.OPEN;
+        s_players = new address payable[](0);
+
         //Transfer the balance to the winner
-        (bool success,) = s_recentWinner.call{value: address(this).balance}("");
-        if(!success) {
+        (bool success, ) = s_recentWinner.call{value: address(this).balance}("");
+        if (!success) {
             revert Raffle__TransferToWinnerFailed();
         }
+
+        emit WinnerPicked(s_recentWinner);
 
     }
 
