@@ -160,7 +160,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         //VRFCoordinator also emits an event but we emit our own to make it easy to track and test
         emit RequestedRaffleWinner(requestId);
 
-        // 2. Get RNG
+       
     }
 
     //Internal because the external contract calls raw fulfillRandomWords which then calls this

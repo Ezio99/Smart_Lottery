@@ -5,6 +5,8 @@ import {Raffle} from "src/Raffle.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
 import {HelperConfig} from "script/HelperConfig.s.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
 contract RaffleTest is Test {
     Raffle public raffle;
@@ -23,6 +25,15 @@ contract RaffleTest is Test {
     //Have to copy events we want to test
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+
+    modifier raffleEntered() {
+        //Arrange
+        vm.prank(PLAYER);
+        raffle.enterRaffle{value: entranceFee}();
+        vm.warp(block.timestamp + interval + 1);
+        vm.roll(block.number + 1);
+        _;
+    }
 
     function setUp() external {
         DeployRaffle deployer = new DeployRaffle();
@@ -115,15 +126,11 @@ contract RaffleTest is Test {
         vm.stopPrank();
     }
 
-    function testCheckUpkeepReturnsFalseWhenRaffleIsNotOpen() public {
+    function testCheckUpkeepReturnsFalseWhenRaffleIsNotOpen()
+        public
+        raffleEntered
+    {
         //Arrange
-        vm.startPrank(PLAYER);
-        //Setting up Playerupkeep to pass so that raffle is calculating
-        raffle.enterRaffle{value: entranceFee}();
-        //Sets block timestamp
-        vm.warp(block.timestamp + interval + 1);
-        //Sets block number
-        vm.roll(block.number + 1);
         //Closes raffle
         raffle.performUpkeep("");
 
@@ -132,19 +139,16 @@ contract RaffleTest is Test {
 
         //Assert
         assert(!upKeepNeeded);
-        vm.stopPrank();
     }
 
     /* Perform upkeep tests */
-    function testPerformUpKeepCanOnlyRunIfCheckUpKeepIsTrue() public {
+    function testPerformUpKeepCanOnlyRunIfCheckUpKeepIsTrue()
+        public
+        raffleEntered
+    {
         //Arrange
-        vm.startPrank(PLAYER);
-        raffle.enterRaffle{value: entranceFee}();
-        vm.warp(block.timestamp + interval + 1);
-        vm.roll(block.number + 1);
         //Act
         raffle.performUpkeep("");
-        vm.stopPrank();
     }
 
     function testPerformUpKeepRevertsIfCheckUpKeepIsFalse() public {
@@ -170,4 +174,32 @@ contract RaffleTest is Test {
         raffle.performUpkeep("");
         vm.stopPrank();
     }
+
+    //Get data from events into test
+    function testPerformUpKeepUpdatesRaffleStateAndEmitsEvent()
+        public
+        raffleEntered
+    {
+        //Arrange
+
+        //Act
+        //Keep track of logs/events emitted by next function
+        vm.recordLogs();
+        raffle.performUpkeep("");
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        // string memory sample = string(abi.encode(entries[0].topics[0]));
+        // console.log(sample);
+        bytes32 requestId = entries[1].topics[1];
+
+        //Assert
+        Raffle.RaffleState raffleState = raffle.getRaffleState();
+        assert(uint256(requestId) > 0);
+        assertEq(
+            uint256(raffleState),
+            uint256(Raffle.RaffleState.CALCULATING_WINNER),
+            "Raffle state not updated to calculating winner"
+        );
+    }
+
+
 }
