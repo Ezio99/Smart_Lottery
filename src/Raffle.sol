@@ -51,6 +51,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
     /* Events */
     event RaffleEntered(address indexed player);
     event WinnerPicked(address indexed winner);
+    event RequestedRaffleWinner(uint256 indexed requestId);
 
     constructor(
         uint256 entranceFee,
@@ -154,7 +155,10 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
         //s_vrfCoordinator is inherited from VRFConsumerBaseV2Plus
         //Returns a requestId but we don't need it here
-        s_vrfCoordinator.requestRandomWords(request);
+        uint256 requestId = s_vrfCoordinator.requestRandomWords(request);
+
+        //VRFCoordinator also emits an event but we emit our own to make it easy to track and test
+        emit RequestedRaffleWinner(requestId);
 
         // 2. Get RNG
     }
@@ -192,9 +196,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         return s_raffleState;
     }
 
-    function getPlayerFromIndex(
-        uint256 index
-    ) external view returns (address) {
+    function getPlayerFromIndex(uint256 index) external view returns (address) {
         return s_players[index];
     }
 }
