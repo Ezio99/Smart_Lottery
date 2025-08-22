@@ -89,7 +89,7 @@ contract RaffleTest is Test {
         //Sets block timestamp
         vm.warp(block.timestamp + interval + 1);
         //Sets block number
-        vm.roll(block.number+1);
+        vm.roll(block.number + 1);
         raffle.performUpkeep("");
         vm.expectRevert(Raffle.Raffle__NotOpen.selector);
         //Act
@@ -97,4 +97,43 @@ contract RaffleTest is Test {
         vm.stopPrank();
         //Assert
     }
+
+    /* Check upkeep tests */
+
+    function testCheckUpkeepReturnsFalseIfItHasNoBalance() public {
+        //Arrange
+        vm.startPrank(PLAYER);
+        // No player entered so no balance
+        //Sets block timestamp
+        vm.warp(block.timestamp + interval + 1);
+        //Sets block number
+        vm.roll(block.number + 1);
+        //Act
+        (bool upKeepNeeded, ) = raffle.checkUpkeep("");
+        //Assert
+        assert(!upKeepNeeded);
+        vm.stopPrank();
+    }
+
+    function testCheckUpkeepReturnsFalseWhenRaffleIsNotOpen() public{
+        //Arrange
+        vm.startPrank(PLAYER);
+        //Setting up Playerupkeep to pass so that raffle is calculating
+        raffle.enterRaffle{value: entranceFee}();
+        //Sets block timestamp
+        vm.warp(block.timestamp + interval + 1);
+        //Sets block number
+        vm.roll(block.number + 1);
+        //Closes raffle
+        raffle.performUpkeep("");
+
+        //Act 
+        (bool upKeepNeeded, ) = raffle.checkUpkeep("");
+
+        //Assert
+        assert(!upKeepNeeded);
+        vm.stopPrank();
+    }
+
+
 }

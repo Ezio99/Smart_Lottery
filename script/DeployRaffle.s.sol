@@ -7,8 +7,9 @@ import {HelperConfig} from "script/HelperConfig.s.sol";
 import {CreateVRFSubscription, FundVRFSubscription, AddVRFConsumer} from "script/Interactions.s.sol";
 
 contract DeployRaffle is Script {
-    // function run() public {
-    // }
+    function run() public {
+        deployContract();
+    }
 
     function deployContract() public returns (Raffle, HelperConfig) {
         HelperConfig helperConfig = new HelperConfig();
