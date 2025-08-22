@@ -16,16 +16,18 @@ contract CreateVRFSubscription is Script {
         address vrfCoordinator = helperConfig
             .getNetworkConfigByChainId()
             .vrfCoordinator;
-
-        return createVRFSubscription(vrfCoordinator);
+        address account = helperConfig.getNetworkConfigByChainId().account;
+        return createVRFSubscription(vrfCoordinator, account);
     }
 
     function createVRFSubscription(
-        address vrfCoordinator
+        address vrfCoordinator,
+        address account
     ) public returns (uint256) {
         console.log("Creating VRF Subscription on: ", vrfCoordinator);
         console.log("Creating VRF Subscription on chain id: ", block.chainid);
-        vm.startBroadcast();
+        //This account is the sender
+        vm.startBroadcast(account);
         uint256 subscriptionId = VRFCoordinatorV2_5Mock(vrfCoordinator)
             .createSubscription();
         vm.stopBroadcast();
@@ -40,7 +42,8 @@ contract CreateVRFSubscription is Script {
 }
 
 contract FundVRFSubscription is Script, CodeConstants {
-    uint256 public constant FUND_AMOUNT = 3 ether; // 0.03 link
+    //Fund for subscription, has no relation to raffle balance etc.
+    uint256 public constant FUND_AMOUNT = 0.05 ether; // 0.05 link
 
     function fundVRFSubscriptionUsingConfig() public {
         HelperConfig helperConfig = new HelperConfig();
@@ -51,13 +54,15 @@ contract FundVRFSubscription is Script, CodeConstants {
             .getNetworkConfigByChainId()
             .subscriptionId;
         address linkToken = helperConfig.getNetworkConfigByChainId().link;
-        fundVRFSubscription(vrfCoordinator, subsciptionId, linkToken);
+        address account = helperConfig.getNetworkConfigByChainId().account;
+        fundVRFSubscription(vrfCoordinator, subsciptionId, linkToken, account);
     }
 
     function fundVRFSubscription(
         address vrfCoordinator,
         uint256 subscriptionId,
-        address linkToken
+        address linkToken,
+        address account
     ) public {
         console.log("Funding VRF Subscription coordinator:", vrfCoordinator);
         console.log("Funding VRF Subscription id:", subscriptionId);
@@ -68,11 +73,11 @@ contract FundVRFSubscription is Script, CodeConstants {
             // Not new, using the existing deployed mock contract
             VRFCoordinatorV2_5Mock(vrfCoordinator).fundSubscription(
                 subscriptionId,
-                FUND_AMOUNT*100
+                FUND_AMOUNT * 10000000
             );
             vm.stopBroadcast();
         } else {
-            vm.startBroadcast();
+            vm.startBroadcast(account);
             LinkToken(linkToken).transferAndCall(
                 vrfCoordinator,
                 FUND_AMOUNT,
@@ -98,17 +103,20 @@ contract AddVRFConsumer is Script {
         address vrfCoordinator = helperConfig
             .getNetworkConfigByChainId()
             .vrfCoordinator;
+        address account = helperConfig.getNetworkConfigByChainId().account;
         addVRFConsumer(
             mostRecentlyDeployedContract,
             vrfCoordinator,
-            subsciptionId
+            subsciptionId,
+            account
         );
     }
 
     function addVRFConsumer(
         address contractToAddToVRF,
         address vrfCoordinator,
-        uint256 subscriptionId
+        uint256 subscriptionId,
+        address account
     ) public {
         console.log(
             "Adding VRF Consumer to contract: ",
@@ -116,10 +124,10 @@ contract AddVRFConsumer is Script {
             " on chain id: ",
             block.chainid
         );
-        console.log("Using VRF Coordinator: ", vrfCoordinator);
-        console.log("Using Subscription ID: ", subscriptionId);
+        console.log("Adding consumer using VRF Coordinator: ", vrfCoordinator);
+        console.log("Adding consumer using Subscription ID: ", subscriptionId);
 
-        vm.startBroadcast();
+        vm.startBroadcast(account);
         VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(
             subscriptionId,
             contractToAddToVRF
@@ -129,7 +137,7 @@ contract AddVRFConsumer is Script {
             "Added VRF Consumer to contract: ",
             contractToAddToVRF,
             " successfully."
-        ); 
+        );
     }
 
     function run() external {

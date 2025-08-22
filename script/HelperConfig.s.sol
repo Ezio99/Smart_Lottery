@@ -26,6 +26,7 @@ contract HelperConfig is Script, CodeConstants {
         uint256 subscriptionId;
         uint32 callbackGasLimit;
         address link; // LINK token address, not used in local anvil
+        address account; // Account deploying it
     }
 
     NetworkConfig public localNetworkConfig;
@@ -56,7 +57,8 @@ contract HelperConfig is Script, CodeConstants {
                 gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
                 callbackGasLimit: 500000,
                 subscriptionId: 0,
-                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789
+                link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
+                account:0x5Cd9142693Ad5CE14033262cb90833ADd71c6580 //Meta mask dev wallet
             });
     }
 
@@ -83,7 +85,9 @@ contract HelperConfig is Script, CodeConstants {
             gasLane: 0x787d74caea10b2b357790d5b5247c2f63d1d91572a9846f780606e4d953677ae,
             callbackGasLimit: 500000,
             subscriptionId: 0,
-            link: address(linkToken)
+            link: address(linkToken),
+            //Base.sol (forge-std) foundry default sender for local
+            account:0x1804c8AB1F12E6bbf3894d4083f33e07309d1f38
         });
 
         return localNetworkConfig;

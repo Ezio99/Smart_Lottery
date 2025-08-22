@@ -4,11 +4,11 @@ pragma solidity 0.8.19;
 import {Raffle} from "src/Raffle.sol";
 import {Test, console} from "forge-std/Test.sol";
 import {DeployRaffle} from "script/DeployRaffle.s.sol";
-import {HelperConfig} from "script/HelperConfig.s.sol";
+import {HelperConfig, CodeConstants} from "script/HelperConfig.s.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 
-contract RaffleTest is Test {
+contract RaffleTest is Test, CodeConstants {
     Raffle public raffle;
     HelperConfig public helperConfig;
 
@@ -32,6 +32,13 @@ contract RaffleTest is Test {
         raffle.enterRaffle{value: entranceFee}();
         vm.warp(block.timestamp + interval + 1);
         vm.roll(block.number + 1);
+        _;
+    }
+
+    modifier skipFork() {
+        if (block.chainid != LOCAL_ANVIL_CHAIN_ID) {
+            return;
+        }
         _;
     }
 
@@ -151,16 +158,25 @@ contract RaffleTest is Test {
         raffle.performUpkeep("");
     }
 
+    /**
+     * Sepolia test error 
+     * Raffle balance before entering 116040000000000000 (Has some initial)
+       Expected balance 10000000000000000
+       Raffle balance after entering 126040000000000000
+     */
     function testPerformUpKeepRevertsIfCheckUpKeepIsFalse() public {
         //Arrange
         uint256 currentBalance = 0;
         uint256 currentPlayers = 0;
         Raffle.RaffleState currentState = raffle.getRaffleState();
         vm.startPrank(PLAYER);
-
+        console.log("Raffle balance before entering",address(raffle).balance);
+        currentBalance = address(raffle).balance + entranceFee;
         raffle.enterRaffle{value: entranceFee}();
-        currentBalance += entranceFee;
         currentPlayers++;
+
+        console.log("Expected balance", currentBalance);
+        console.log("Raffle balance after entering",address(raffle).balance);
 
         vm.expectRevert(
             abi.encodeWithSelector(
@@ -208,7 +224,7 @@ contract RaffleTest is Test {
     //It tested 256 times with different random numbers
     function testFulFillRandomWordsOnlyCalledAfterPerformUpKeep(
         uint256 randomRequestId
-    ) public raffleEntered {
+    ) public skipFork raffleEntered {
         //Arrange / Act / Assert
         vm.expectRevert(VRFCoordinatorV2_5Mock.InvalidRequest.selector);
         VRFCoordinatorV2_5Mock(vrfCoordinator).fulfillRandomWords(
@@ -218,8 +234,10 @@ contract RaffleTest is Test {
     }
 
     //One giant end-to-end test
+    //This wil always fail in fork tests because we are using a mock vrfcoorfdinator which does not exist on the fork chain
     function testFulfillRandomWordsPicksAWinnerResetsAndSendsMoney()
         public
+        skipFork
         raffleEntered
     {
         address expectedWinner = address(1);
