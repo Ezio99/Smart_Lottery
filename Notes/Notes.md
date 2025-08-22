@@ -32,3 +32,6 @@ The VRFCooridinator then hits our contract's `rawFulfillRandomWords()` (inherite
 Coding pattern : CEI (Checks, Effects (State changes), Interactions (External contract interactions)) - Try following this structure in your functions
 
 Also a best practice would be to emit events before interactions and after effects
+
+`forge coverage --report debug > coverage.txt` - gives a report of coverage
+
