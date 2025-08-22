@@ -5,6 +5,10 @@ import {Script, console} from "forge-std/Script.sol";
 import {HelperConfig, CodeConstants} from "script/HelperConfig.s.sol";
 import {VRFCoordinatorV2_5Mock} from "@chainlink/contracts/src/v0.8/vrf/mocks/VRFCoordinatorV2_5Mock.sol";
 import {LinkToken} from "test/mock/LinkToken.sol";
+import {DevOpsTools} from "lib/foundry-devops/src/DevOpsTools.sol";
+
+//Programmatic way to create a VRF subscription, fund it, and add a consumer to it.
+//Can also be done manually on the website
 
 contract CreateVRFSubscription is Script {
     function createVRFSubscriptionUsingConfig() public returns (uint256) {
@@ -35,10 +39,10 @@ contract CreateVRFSubscription is Script {
     }
 }
 
-contract FundSubscription is Script, CodeConstants {
+contract FundVRFSubscription is Script, CodeConstants {
     uint256 public constant FUND_AMOUNT = 0.03 ether; // 0.03 link
 
-    function fundSubscription() public {
+    function fundVRFSubscriptionUsingConfig() public {
         HelperConfig helperConfig = new HelperConfig();
         address vrfCoordinator = helperConfig
             .getNetworkConfigByChainId()
@@ -47,10 +51,10 @@ contract FundSubscription is Script, CodeConstants {
             .getNetworkConfigByChainId()
             .subscriptionId;
         address linkToken = helperConfig.getNetworkConfigByChainId().link;
-        fundSubscription(vrfCoordinator, subsciptionId, linkToken);
+        fundVRFSubscription(vrfCoordinator, subsciptionId, linkToken);
     }
 
-    function fundSubscription(
+    function fundVRFSubscription(
         address vrfCoordinator,
         uint256 subscriptionId,
         address linkToken
@@ -78,11 +82,59 @@ contract FundSubscription is Script, CodeConstants {
         }
     }
 
-    function run() external {}
+    function run() external {
+        fundVRFSubscriptionUsingConfig();
+    }
 }
 
-contract AddVRFConsumer is Script{
-    function run() external {}
+contract AddVRFConsumer is Script {
+    function addVRFConsumerUsingConfig(
+        address mostRecentlyDeployedContract
+    ) public {
+        HelperConfig helperConfig = new HelperConfig();
+        uint256 subsciptionId = helperConfig
+            .getNetworkConfigByChainId()
+            .subscriptionId;
+        address vrfCoordinator = helperConfig
+            .getNetworkConfigByChainId()
+            .vrfCoordinator;
+        addVRFConsumer(
+            mostRecentlyDeployedContract,
+            vrfCoordinator,
+            subsciptionId
+        );
+    }
 
-    
+    function addVRFConsumer(
+        address contractToAddToVRF,
+        address vrfCoordinator,
+        uint256 subscriptionId
+    ) public {
+        console.log(
+            "Adding VRF Consumer to contract: ",
+            contractToAddToVRF,
+            " on chain id: ",
+            block.chainid
+        );
+        console.log("Using VRF Coordinator: ", vrfCoordinator);
+        console.log("Using Subscription ID: ", subscriptionId);
+
+        vm.startBroadcast();
+        VRFCoordinatorV2_5Mock(vrfCoordinator).addConsumer(
+            subscriptionId,
+            contractToAddToVRF
+        );
+        vm.stopBroadcast();
+        console.log(
+            "Added VRF Consumer to contract: ",
+            contractToAddToVRF,
+            " successfully."
+        ); 
+    }
+
+    function run() external {
+        address mostRecentlyDeployedContract = DevOpsTools
+            .get_most_recent_deployment("Raffle", block.chainid);
+        addVRFConsumerUsingConfig(mostRecentlyDeployedContract);
+    }
 }
