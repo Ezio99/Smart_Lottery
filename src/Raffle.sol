@@ -173,6 +173,7 @@ contract Raffle is VRFConsumerBaseV2Plus {
         s_recentWinner = s_players[winnerIndex];
 
         s_raffleState = RaffleState.OPEN;
+        s_lastTimeStamp = block.timestamp;
         s_players = new address payable[](0);
         emit WinnerPicked(s_recentWinner);
 
@@ -198,5 +199,13 @@ contract Raffle is VRFConsumerBaseV2Plus {
 
     function getPlayerFromIndex(uint256 index) external view returns (address) {
         return s_players[index];
+    }
+
+    function getLastTimeStamp() external view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    function getRecentWinner() external view returns (address) {
+        return s_recentWinner;
     }
 }

@@ -35,3 +35,13 @@ Also a best practice would be to emit events before interactions and after effec
 
 `forge coverage --report debug > coverage.txt` - gives a report of coverage
 
+Fuzz testing
+If we have a test where a parameter could be any random number we can try using fuzz testing
+e.g.  function testFulFillRandomWordsOnlyCalledAfterPerformUpKeep(uint256 randomRequestId), when we pass randomRequestId as a param foundry will try running the test with different randomnumbers in that parameter
+By default its 256 times
+When we run we see -  testFulFillRandomWordsOnlyCalledAfterPerformUpKeep(uint256) (runs: 256, μ: 82375, ~: 82375) (It tested 256 times with different random numbers)
+
+We can change this by specifying the number of runs in foundry.toml
+`[fuzz]
+runs=1000`
+

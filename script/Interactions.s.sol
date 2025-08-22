@@ -40,7 +40,7 @@ contract CreateVRFSubscription is Script {
 }
 
 contract FundVRFSubscription is Script, CodeConstants {
-    uint256 public constant FUND_AMOUNT = 0.03 ether; // 0.03 link
+    uint256 public constant FUND_AMOUNT = 3 ether; // 0.03 link
 
     function fundVRFSubscriptionUsingConfig() public {
         HelperConfig helperConfig = new HelperConfig();
@@ -68,7 +68,7 @@ contract FundVRFSubscription is Script, CodeConstants {
             // Not new, using the existing deployed mock contract
             VRFCoordinatorV2_5Mock(vrfCoordinator).fundSubscription(
                 subscriptionId,
-                FUND_AMOUNT
+                FUND_AMOUNT*100
             );
             vm.stopBroadcast();
         } else {
