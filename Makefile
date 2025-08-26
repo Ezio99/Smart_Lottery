@@ -1,5 +1,7 @@
 -include .env
 
+# .PHONY is a special Make target that marks other targets as not real files
+# Prevents name collisions: if a file named clean or test exists, make clean would otherwise do nothing because make thinks the target is “up to date.”
 .PHONY: all test clean deploy fund help install snapshot format anvil 
 
 DEFAULT_ANVIL_KEY := 0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
